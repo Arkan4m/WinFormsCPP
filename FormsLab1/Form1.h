@@ -1,8 +1,11 @@
 #pragma once
+#define NOMINMAX
 #include <msclr/marshal_cppstd.h>
 #include <fstream>
 #include <iostream> 
 #include <string>
+#include <map>
+#include <optional>
 struct CustomData {
 public:
 	char EventName[36];
@@ -17,12 +20,10 @@ public:
 	char Winner[12];
 	bool flag = 0;
 };
-std::fstream SaveData("SavedData.bin");
+std::fstream SaveData("SavedData.bin", std::ios::in | std::ios::out);
 CustomData SD;
-int PgNumber = 0;
-long FullSize = -1;
-int PgFirst = 0;
-int PgLast = 0;
+std::optional<int> PgNumber;
+int FullSize;
 namespace FormsLab1 {
 
 	using namespace System::IO;
@@ -45,10 +46,14 @@ namespace FormsLab1 {
 			if (SaveData.is_open())
 			{
 				SaveData.seekp(0, std::ios::end);
-				FullSize = ((long)SaveData.tellg() - 1) / sizeof(SD);
+				FullSize = SaveData.tellg() / sizeof(SD);
+				auto pages = undeletedPages();
+				if (!pages.empty())
+					PgNumber = pages.begin()->first;
 				SaveData.seekp(0);
 			}
-			
+			else
+				throw std::exception("file was not open");
 		}
 
 	protected:
@@ -84,11 +89,15 @@ namespace FormsLab1 {
 	private: System::Windows::Forms::ComboBox^ comboBox_Winner;
 	private: System::Windows::Forms::Button^ buttonExit;
 	private: System::Windows::Forms::Button^ buttonDelete;
+	private: System::Windows::Forms::Button^ button_trueBack;
+	private: System::Windows::Forms::Button^ button_trueNext;
 	private: System::Windows::Forms::Label^ label_Pages;
 	private: System::Windows::Forms::Button^ button_Update;
 	private: System::Windows::Forms::DateTimePicker^ dateTimePicker_StartDate;
 	private: System::Windows::Forms::Label^ label_EndDate;
 	private: System::Windows::Forms::DateTimePicker^ dateTimePicker_EndDate;
+	private: System::Windows::Forms::Button^ button_flagoff;
+
 	private: System::ComponentModel::IContainer^ components;
 
 #pragma region Windows Form Designer generated code
@@ -126,6 +135,9 @@ namespace FormsLab1 {
 			this->dateTimePicker_StartDate = (gcnew System::Windows::Forms::DateTimePicker());
 			this->label_EndDate = (gcnew System::Windows::Forms::Label());
 			this->dateTimePicker_EndDate = (gcnew System::Windows::Forms::DateTimePicker());
+			this->button_flagoff = (gcnew System::Windows::Forms::Button());
+			this->button_trueBack = (gcnew System::Windows::Forms::Button());
+			this->button_trueNext = (gcnew System::Windows::Forms::Button());
 			this->SuspendLayout();
 			// 
 			// label_StartDate
@@ -383,11 +395,12 @@ namespace FormsLab1 {
 			// 
 			// label_Pages
 			// 
+			this->label_Pages->AutoSize = true;
 			this->label_Pages->BorderStyle = System::Windows::Forms::BorderStyle::Fixed3D;
 			this->label_Pages->Font = (gcnew System::Drawing::Font(L"Arial Black", 9, System::Drawing::FontStyle::Bold));
-			this->label_Pages->Location = System::Drawing::Point(335, 302);
+			this->label_Pages->Location = System::Drawing::Point(349, 304);
 			this->label_Pages->Name = L"label_Pages";
-			this->label_Pages->Size = System::Drawing::Size(139, 20);
+			this->label_Pages->Size = System::Drawing::Size(106, 19);
 			this->label_Pages->TabIndex = 57;
 			this->label_Pages->Text = L"Запись: 1 из 4";
 			this->label_Pages->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
@@ -436,6 +449,38 @@ namespace FormsLab1 {
 			this->dateTimePicker_EndDate->TabIndex = 61;
 			this->dateTimePicker_EndDate->Value = System::DateTime(1945, 9, 10, 0, 0, 0, 0);
 			// 
+			// button_flagoff
+			// 
+			this->button_flagoff->Location = System::Drawing::Point(585, 326);
+			this->button_flagoff->Name = L"button_flagoff";
+			this->button_flagoff->Size = System::Drawing::Size(80, 23);
+			this->button_flagoff->TabIndex = 62;
+			this->button_flagoff->Text = L"Убрать флаг";
+			this->button_flagoff->UseVisualStyleBackColor = true;
+			this->button_flagoff->Click += gcnew System::EventHandler(this, &Form1::buttonflagoff_Click);
+			// 
+			// button_trueBack
+			// 
+			this->button_trueBack->Cursor = System::Windows::Forms::Cursors::Hand;
+			this->button_trueBack->Location = System::Drawing::Point(376, 278);
+			this->button_trueBack->Name = L"button_trueBack";
+			this->button_trueBack->Size = System::Drawing::Size(27, 23);
+			this->button_trueBack->TabIndex = 63;
+			this->button_trueBack->Text = L"<";
+			this->button_trueBack->UseVisualStyleBackColor = true;
+			this->button_trueBack->Click += gcnew System::EventHandler(this, &Form1::button_trueBack_Click);
+			// 
+			// button_trueNext
+			// 
+			this->button_trueNext->Cursor = System::Windows::Forms::Cursors::Hand;
+			this->button_trueNext->Location = System::Drawing::Point(406, 278);
+			this->button_trueNext->Name = L"button_trueNext";
+			this->button_trueNext->Size = System::Drawing::Size(27, 23);
+			this->button_trueNext->TabIndex = 64;
+			this->button_trueNext->Text = L">";
+			this->button_trueNext->UseVisualStyleBackColor = true;
+			this->button_trueNext->Click += gcnew System::EventHandler(this, &Form1::button_trueNext_Click);
+			// 
 			// Form1
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
@@ -444,6 +489,9 @@ namespace FormsLab1 {
 			this->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"$this.BackgroundImage")));
 			this->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
 			this->ClientSize = System::Drawing::Size(884, 361);
+			this->Controls->Add(this->button_trueNext);
+			this->Controls->Add(this->button_trueBack);
+			this->Controls->Add(this->button_flagoff);
 			this->Controls->Add(this->dateTimePicker_EndDate);
 			this->Controls->Add(this->label_EndDate);
 			this->Controls->Add(this->dateTimePicker_StartDate);
@@ -487,9 +535,10 @@ namespace FormsLab1 {
 		}
 #pragma endregion
 	
-	Void ProgramStart() {
-			SaveData.seekg(PgNumber * sizeof(SD), std::ios_base::beg);
-			SaveData.read((char*)&SD, sizeof(SD));
+	Void Display() {
+		if (PgNumber.has_value())
+		{
+			ReadSD(*PgNumber);
 			textBox_EventName->Text = gcnew String(SD.EventName);
 			dateTimePicker_StartDate->Text = gcnew String(SD.StartDate);
 			dateTimePicker_EndDate->Text = gcnew String(SD.EndDate);
@@ -500,20 +549,39 @@ namespace FormsLab1 {
 			textBox_LossesAxis->Text = gcnew String(SD.LossesAxis);
 			textBox_LossesAllies->Text = gcnew String(SD.LossesAllies);
 			comboBox_Winner->Text = gcnew String(SD.Winner);
-	}
-	int PgCheck() {
-		int PgFirst = PgNumber + 1;
-		int PgLast = FullSize + 1;
-		label_Pages->Text = "Запись: "+PgFirst+" из "+PgLast;
-		return PgFirst;
-		return PgLast;
-	}
+		}
 
+		auto pages = undeletedPages();
+
+		int page = 0, count = 0;
+		bool deleted = false;
+		if (PgNumber.has_value()) // стоим где-то
+		{
+			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+			{
+				page = pages[*PgNumber];
+				count = pages.size();
+			}
+			else // на удалённой
+			{
+				page = *PgNumber + 1;
+				count = FullSize;
+				deleted = true;
+			}
+		}
+
+		label_Pages->Text = "Запись: " + page + " из " + count + (deleted ? " (все)" : "");
+	}
+	Void ReadSD(int i) {
+			if (!(0 <= i && i < FullSize))
+				return;
+
+			SaveData.seekg(i * sizeof(SD), std::ios_base::beg);
+			SaveData.read((char*)&SD, sizeof(SD));
+	}
 	private: System::Void Form1_Load(System::Object^ sender, System::EventArgs^ e) {
-		ProgramStart();
-		PgCheck();
+		Display();
 	}
-
 	private: System::Void button_ClearAll_Click(System::Object^ sender, System::EventArgs^ e) {
 		textBox_EventName->Clear();
 		dateTimePicker_StartDate->Text = "";
@@ -530,7 +598,7 @@ namespace FormsLab1 {
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите добавить новую запись?", "Добавление новой записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 		if (result == System::Windows::Forms::DialogResult::Yes) {
 			FullSize++;
-			PgNumber = FullSize;
+			PgNumber = FullSize - 1;
 			strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
 			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
 			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
@@ -541,39 +609,89 @@ namespace FormsLab1 {
 			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+			SaveData.seekp(*PgNumber * sizeof(SD));
 			SaveData.write((char*)&SD, sizeof(SD));
-			SaveData.close();
-			SaveData.open("SavedData.bin");
-			PgCheck();
+			Display();
 		}
+	}
+	std::map<int, int> undeletedPages()
+	{
+		std::map<int, int> res;
+		int display = 1;
+		for (int real = 0; real < FullSize; real++)
+		{
+			ReadSD(real);
+			if (!SD.flag)
+			{
+				res.insert({real, display});
+				display++;
+			}
+		}
+		return res;
 	}
 	private: System::Void button_home_Click(System::Object^ sender, System::EventArgs^ e) {
-		PgNumber = 0;
-		ProgramStart();
-		PgCheck();
+		if (PgNumber.has_value()) // стоим где-то
+		{
+			auto pages = undeletedPages();
+			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+				jumpToPage(pages.begin()->first);
+			else // на удалённой
+				jumpToPage(0);
+		}
 	}
 	private: System::Void button_next_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber < FullSize) {
-			PgNumber++;
-			if (SaveData.is_open()) {
-				ProgramStart();
+		if (PgNumber.has_value()) // стоим где-то
+		{
+			auto pages = undeletedPages();
+			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+			{
+				auto it = pages.begin();
+				for (; it != pages.end(); it++)
+					if (it->first > *PgNumber)
+						break;
+
+				if (it != pages.end())
+					jumpToPage(it->first);
 			}
+			else // на удалённой
+				trueNext();
 		}
-		PgCheck();
 	}
 	private: System::Void button_back_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber > 0) {
-			PgNumber--;
-			if (SaveData.is_open()) {
-				ProgramStart();
+		if (PgNumber.has_value()) // стоим где-то
+		{
+			auto pages = undeletedPages();
+			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+			{
+				auto it = pages.rbegin();
+				for (; it != pages.rend(); it++)
+					if (it->first < *PgNumber)
+						break;
+
+				if (it != pages.rend())
+					jumpToPage(it->first);
 			}
+			else // на удалённой
+				trueBack();
 		}
-		PgCheck();
 	}
 	private: System::Void button_end_Click(System::Object^ sender, System::EventArgs^ e) {
-		PgNumber = FullSize;
-		ProgramStart();
-		PgCheck();
+		if (PgNumber.has_value()) // стоим где-то
+		{
+			auto pages = undeletedPages();
+			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+				jumpToPage((--pages.end())->first);
+			else // на удалённой
+				jumpToPage(FullSize - 1);
+		}
+	}
+	void jumpToPage(int i)
+	{
+		if (i != PgNumber)
+		{
+			PgNumber = i;
+			Display();
+		}
 	}
 	private: System::Void buttonExit_Click(System::Object^ sender, System::EventArgs^ e) {
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите выйти?", "Выход", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
@@ -584,7 +702,7 @@ namespace FormsLab1 {
 			}
 			else if (result == System::Windows::Forms::DialogResult::Yes) {
 				FullSize++;
-				PgNumber = FullSize;
+				PgNumber = FullSize - 1;
 				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
 				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
 				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
@@ -596,9 +714,7 @@ namespace FormsLab1 {
 				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
 				SaveData.write((char*)&SD, sizeof(SD));
-				SaveData.close();
-				SaveData.open("SavedData.bin");
-				PgCheck();
+				Display();
 				System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
 				if (result == System::Windows::Forms::DialogResult::OK){
 					this->Close();
@@ -610,9 +726,11 @@ namespace FormsLab1 {
 		}
 	}
 	private: System::Void button_Update_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (!PgNumber.has_value())
+			return;
+
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите изменить данную запись?", "Изменение записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 		if (result == System::Windows::Forms::DialogResult::Yes) {
-			SaveData.seekg(PgNumber * sizeof(SD), ios::beg);
 			strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
 			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
 			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
@@ -623,47 +741,79 @@ namespace FormsLab1 {
 			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+			SaveData.seekg(*PgNumber * sizeof(SD));
 			SaveData.write((char*)&SD, sizeof(SD));
-			SaveData.close();
-			SaveData.open("SavedData.bin");
-			PgCheck();
-			SaveData.seekp(FullSize * sizeof(SD));
-		}
-		else if (result == System::Windows::Forms::DialogResult::No) {
-			ProgramStart();
 		}
 	}
 private: System::Void buttonDelete_Click(System::Object^ sender, System::EventArgs^ e) {
-	/*System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите удалить запись?", "Удаление записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+	if (!PgNumber.has_value())
+		return;
+
+	System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите удалить запись?", "Удаление записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 	if (result == System::Windows::Forms::DialogResult::Yes) {
+		SaveData.seekp(*PgNumber * sizeof(SD));
 		SD.flag = true;
-		SaveData.seekp(PgNumber * sizeof(SD), ios::beg);
 		SaveData.write((char*)&SD, sizeof(SD));
-		if (PgFirst > PgLast) {
-			while (SD.flag == true) {
-				PgNumber--;
-				SaveData.seekp(PgNumber * sizeof(SD), ios::beg);
+		if (PgNumber > 0) {
+			do {
+				PgNumber.value()--;
+				SaveData.seekp(*PgNumber * sizeof(SD));
 				SaveData.read((char*)&SD, sizeof(SD));
-			}
-			PgFirst--;
-			ProgramStart();
+				if (!SD.flag) {
+					break;
+				}
+			} 
+			while (SD.flag == true && PgNumber > 0);
 		}
 		else {
-			PgNumber++;
-			SaveData.seekp(PgNumber * sizeof(SD), ios::beg);
-			SaveData.read((char*)&SD, sizeof(SD));
-			while (SD.flag == true) {
-				PgNumber++;
-				SaveData.seekp(PgNumber * sizeof(SD), ios::beg);
+			do {
+				PgNumber.value()++;
+				SaveData.seekp(*PgNumber * sizeof(SD));
 				SaveData.read((char*)&SD, sizeof(SD));
-			}
-			ProgramStart();
+				if (!SD.flag) {
+					break;
+				}
+			} 
+			while (SD.flag == true);
 		}
-		PgCheck();
+
+		Display();
+		}
 	}
-	else if (result == System::Windows::Forms::DialogResult::No) {
-		ProgramStart();
-	}*/
-}
+	private: System::Void buttonflagoff_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (!PgNumber.has_value())
+			return;
+
+		SaveData.seekp(*PgNumber * sizeof(SD));
+		SD.flag = false;
+		SaveData.write((char*)&SD, sizeof(SD));
+		Display();
+	}
+	private: System::Void button_trueBack_Click(System::Object^ sender, System::EventArgs^ e) {
+		trueBack();
+	}
+	void trueBack()
+	{
+		if (!PgNumber.has_value())
+			return;
+
+		if (PgNumber > 0)
+			PgNumber.value()--;
+
+		Display();
+	}
+	private: System::Void button_trueNext_Click(System::Object^ sender, System::EventArgs^ e) {
+		trueNext();
+	}
+	void trueNext()
+	{
+		if (!PgNumber.has_value())
+			return;
+
+		if (*PgNumber + 1 < FullSize)
+			PgNumber.value()++;
+
+		Display();
+	}
 };
 }
