@@ -241,6 +241,7 @@ namespace FormsLab1 {
 			this->textBox_Country->Name = L"textBox_Country";
 			this->textBox_Country->Size = System::Drawing::Size(215, 20);
 			this->textBox_Country->TabIndex = 12;
+			this->textBox_Country->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_Country_KeyPress);
 			// 
 			// textBox_City
 			// 
@@ -249,6 +250,7 @@ namespace FormsLab1 {
 			this->textBox_City->Name = L"textBox_City";
 			this->textBox_City->Size = System::Drawing::Size(215, 20);
 			this->textBox_City->TabIndex = 13;
+			this->textBox_City->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_City_KeyPress);
 			// 
 			// textBox_ManresourceAxis
 			// 
@@ -257,6 +259,7 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAxis->Name = L"textBox_ManresourceAxis";
 			this->textBox_ManresourceAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAxis->TabIndex = 17;
+			this->textBox_ManresourceAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_ManresourceAxis_KeyPress);
 			// 
 			// textBox_ManresourceAllies
 			// 
@@ -265,6 +268,7 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAllies->Name = L"textBox_ManresourceAllies";
 			this->textBox_ManresourceAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAllies->TabIndex = 18;
+			this->textBox_ManresourceAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_ManresourceAllies_KeyPress);
 			// 
 			// textBox_LossesAxis
 			// 
@@ -273,6 +277,7 @@ namespace FormsLab1 {
 			this->textBox_LossesAxis->Name = L"textBox_LossesAxis";
 			this->textBox_LossesAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAxis->TabIndex = 19;
+			this->textBox_LossesAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_LossesAxis_KeyPress);
 			// 
 			// textBox_LossesAllies
 			// 
@@ -281,6 +286,7 @@ namespace FormsLab1 {
 			this->textBox_LossesAllies->Name = L"textBox_LossesAllies";
 			this->textBox_LossesAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAllies->TabIndex = 20;
+			this->textBox_LossesAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_LossesAllies_KeyPress);
 			// 
 			// button_SaveAll
 			// 
@@ -311,6 +317,7 @@ namespace FormsLab1 {
 			this->textBox_EventName->Name = L"textBox_EventName";
 			this->textBox_EventName->Size = System::Drawing::Size(215, 20);
 			this->textBox_EventName->TabIndex = 44;
+			this->textBox_EventName->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_EventName_KeyPress);
 			// 
 			// label_EventName
 			// 
@@ -370,6 +377,7 @@ namespace FormsLab1 {
 			// 
 			// comboBox_Winner
 			// 
+			this->comboBox_Winner->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
 			this->comboBox_Winner->FormattingEnabled = true;
 			this->comboBox_Winner->Items->AddRange(gcnew cli::array< System::Object^  >(2) { L"Ось", L"Союзники" });
 			this->comboBox_Winner->Location = System::Drawing::Point(299, 251);
@@ -658,20 +666,34 @@ namespace FormsLab1 {
 	private: System::Void button_SaveAll_Click(System::Object^ sender, System::EventArgs^ e) {
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите добавить новую запись?", "Добавление новой записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 		if (result == System::Windows::Forms::DialogResult::Yes) {
-			FullSize++;
-			PgNumber = FullSize - 1;
-			strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
-			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
-			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
-			strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
-			strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
-			strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
-			strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
-			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
-			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
-			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-			AppendSD();
-			Display();
+			if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
+				String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
+				String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
+				String::IsNullOrWhiteSpace(textBox_Country->Text) ||
+				String::IsNullOrWhiteSpace(textBox_City->Text) ||
+				String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
+				String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
+				String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
+				String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
+				String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
+				MessageBox::Show("Вы оставили пустое поле!");
+			}
+			else {
+				FullSize++;
+				PgNumber = FullSize - 1;
+				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
+				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
+				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
+				strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
+				strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
+				strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
+				strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
+				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
+				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
+				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+				AppendSD();
+				Display();
+			}
 		}
 	}
 	std::map<int, int> undeletedPages()
@@ -790,23 +812,37 @@ namespace FormsLab1 {
 				this->Close();
 			}
 			else if (result == System::Windows::Forms::DialogResult::Yes) {
-				FullSize++;
-				PgNumber = FullSize - 1;
-				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
-				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
-				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
-				strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
-				strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
-				strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
-				strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
-				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
-				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
-				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-				AppendSD();
-				Display();
-				System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
-				if (result == System::Windows::Forms::DialogResult::OK){
-					this->Close();
+				if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
+					String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
+					String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
+					String::IsNullOrWhiteSpace(textBox_Country->Text) ||
+					String::IsNullOrWhiteSpace(textBox_City->Text) ||
+					String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
+					String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
+					String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
+					String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
+					String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
+					MessageBox::Show("Вы оставили пустое поле!");
+				}
+				else {
+					FullSize++;
+					PgNumber = FullSize - 1;
+					strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
+					strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
+					strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
+					strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
+					strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
+					strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
+					strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
+					strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
+					strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
+					strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+					AppendSD();
+					Display();
+					System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
+					if (result == System::Windows::Forms::DialogResult::OK) {
+						this->Close();
+				}
 				}
 			}
 		}
@@ -817,17 +853,31 @@ namespace FormsLab1 {
 
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите изменить данную запись?", "Изменение записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
 		if (result == System::Windows::Forms::DialogResult::Yes) {
-			strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
-			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
-			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
-			strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
-			strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
-			strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
-			strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
-			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
-			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
-			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-			UpdateSD();
+			if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
+				String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
+				String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
+				String::IsNullOrWhiteSpace(textBox_Country->Text) ||
+				String::IsNullOrWhiteSpace(textBox_City->Text) ||
+				String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
+				String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
+				String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
+				String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
+				String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
+				MessageBox::Show("Вы оставили пустое поле!");
+			}
+			else {
+				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
+				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
+				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
+				strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
+				strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
+				strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
+				strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
+				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
+				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
+				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+				UpdateSD();
+			}
 		}
 	}
 	private: System::Void buttonDelete_Click(System::Object^ sender, System::EventArgs^ e) {
@@ -892,5 +942,58 @@ namespace FormsLab1 {
 
 		OpenPage(FullSize - 1);
 	}
+private: System::Void textBox_ManresourceAxis_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_ManresourceAllies_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_LossesAxis_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_LossesAllies_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_Country_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	char number = e->KeyChar;
+	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
+	{
+		e->Handled = true;
+	}
+	if (Char::IsDigit(number))
+	{
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_City_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	char number = e->KeyChar;
+	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
+	{
+		e->Handled = true;
+	}
+	if (Char::IsDigit(number))
+	{
+		e->Handled = true;
+	}
+}
+private: System::Void textBox_EventName_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+	char number = e->KeyChar;
+	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
+	{
+		e->Handled = true;
+	}
+	if (Char::IsDigit(number))
+	{
+		e->Handled = true;
+	}
+}
 };
 }
