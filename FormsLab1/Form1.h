@@ -22,6 +22,8 @@ public:
 };
 std::fstream SaveData("SavedData.bin", std::ios::in | std::ios::out);
 CustomData SD;
+// Не менять эту переменную вручную!
+// Использовать OpenPage(номер) и ClosePage()
 std::optional<int> PgNumber;
 int FullSize;
 namespace FormsLab1 {
@@ -97,6 +99,8 @@ namespace FormsLab1 {
 	private: System::Windows::Forms::Label^ label_EndDate;
 	private: System::Windows::Forms::DateTimePicker^ dateTimePicker_EndDate;
 	private: System::Windows::Forms::Button^ button_flagoff;
+	private: System::Windows::Forms::Button^ button_trueHome;
+	private: System::Windows::Forms::Button^ button_trueEnd;
 
 	private: System::ComponentModel::IContainer^ components;
 
@@ -138,6 +142,8 @@ namespace FormsLab1 {
 			this->button_flagoff = (gcnew System::Windows::Forms::Button());
 			this->button_trueBack = (gcnew System::Windows::Forms::Button());
 			this->button_trueNext = (gcnew System::Windows::Forms::Button());
+			this->button_trueHome = (gcnew System::Windows::Forms::Button());
+			this->button_trueEnd = (gcnew System::Windows::Forms::Button());
 			this->SuspendLayout();
 			// 
 			// label_StartDate
@@ -481,6 +487,28 @@ namespace FormsLab1 {
 			this->button_trueNext->UseVisualStyleBackColor = true;
 			this->button_trueNext->Click += gcnew System::EventHandler(this, &Form1::button_trueNext_Click);
 			// 
+			// button_trueHome
+			// 
+			this->button_trueHome->Cursor = System::Windows::Forms::Cursors::Hand;
+			this->button_trueHome->Location = System::Drawing::Point(346, 278);
+			this->button_trueHome->Name = L"button_trueHome";
+			this->button_trueHome->Size = System::Drawing::Size(27, 23);
+			this->button_trueHome->TabIndex = 65;
+			this->button_trueHome->Text = L"<<";
+			this->button_trueHome->UseVisualStyleBackColor = true;
+			this->button_trueHome->Click += gcnew System::EventHandler(this, &Form1::button_trueHome_Click);
+			// 
+			// button_trueEnd
+			// 
+			this->button_trueEnd->Cursor = System::Windows::Forms::Cursors::Hand;
+			this->button_trueEnd->Location = System::Drawing::Point(436, 278);
+			this->button_trueEnd->Name = L"button_trueEnd";
+			this->button_trueEnd->Size = System::Drawing::Size(27, 23);
+			this->button_trueEnd->TabIndex = 66;
+			this->button_trueEnd->Text = L">>";
+			this->button_trueEnd->UseVisualStyleBackColor = true;
+			this->button_trueEnd->Click += gcnew System::EventHandler(this, &Form1::button_trueEnd_Click);
+			// 
 			// Form1
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
@@ -489,6 +517,8 @@ namespace FormsLab1 {
 			this->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"$this.BackgroundImage")));
 			this->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
 			this->ClientSize = System::Drawing::Size(884, 361);
+			this->Controls->Add(this->button_trueEnd);
+			this->Controls->Add(this->button_trueHome);
 			this->Controls->Add(this->button_trueNext);
 			this->Controls->Add(this->button_trueBack);
 			this->Controls->Add(this->button_flagoff);
@@ -536,7 +566,7 @@ namespace FormsLab1 {
 #pragma endregion
 	
 	Void Display() {
-		if (PgNumber.has_value())
+		if (PgNumber)
 		{
 			ReadSD(*PgNumber);
 			textBox_EventName->Text = gcnew String(SD.EventName);
@@ -550,12 +580,25 @@ namespace FormsLab1 {
 			textBox_LossesAllies->Text = gcnew String(SD.LossesAllies);
 			comboBox_Winner->Text = gcnew String(SD.Winner);
 		}
+		else
+		{
+			textBox_EventName->Clear();
+			dateTimePicker_StartDate->ResetText();
+			dateTimePicker_EndDate->ResetText();
+			textBox_Country->Clear();
+			textBox_City->Clear();
+			textBox_ManresourceAxis->Clear();
+			textBox_ManresourceAllies->Clear();
+			textBox_LossesAxis->Clear();
+			textBox_LossesAllies->Clear();
+			comboBox_Winner->ResetText();
+		}
 
 		auto pages = undeletedPages();
 
 		int page = 0, count = 0;
 		bool deleted = false;
-		if (PgNumber.has_value()) // стоим где-то
+		if (PgNumber) // стоим где-то
 		{
 			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
 			{
@@ -572,12 +615,30 @@ namespace FormsLab1 {
 
 		label_Pages->Text = "Запись: " + page + " из " + count + (deleted ? " (все)" : "");
 	}
-	Void ReadSD(int i) {
-			if (!(0 <= i && i < FullSize))
-				return;
+	void ReadSD(int i) {
+		if (!(0 <= i && i < FullSize))
+			throw std::invalid_argument("i was out of range");
 
-			SaveData.seekg(i * sizeof(SD), std::ios_base::beg);
-			SaveData.read((char*)&SD, sizeof(SD));
+		SaveData.seekg(i * sizeof(SD));
+		SaveData.read((char*)&SD, sizeof(SD));
+	}
+	void UpdateSD()
+	{
+		if (!PgNumber)
+			return;
+		int i = *PgNumber;
+
+		if (!(0 <= i && i < FullSize))
+			throw std::invalid_argument("i was out of range");
+
+		SaveData.seekp(i * sizeof(SD));
+		SaveData.write((char*)&SD, sizeof(SD));
+		SaveData.seekg(i * sizeof(SD));
+	}
+	void AppendSD()
+	{
+		SaveData.seekp(0, std::ios::end);
+		SaveData.write((char*)&SD, sizeof(SD));
 	}
 	private: System::Void Form1_Load(System::Object^ sender, System::EventArgs^ e) {
 		Display();
@@ -609,13 +670,14 @@ namespace FormsLab1 {
 			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-			SaveData.seekp(*PgNumber * sizeof(SD));
-			SaveData.write((char*)&SD, sizeof(SD));
+			AppendSD();
 			Display();
 		}
 	}
 	std::map<int, int> undeletedPages()
 	{
+		std::optional<int> initPosition = PgNumber;
+
 		std::map<int, int> res;
 		int display = 1;
 		for (int real = 0; real < FullSize; real++)
@@ -627,69 +689,96 @@ namespace FormsLab1 {
 				display++;
 			}
 		}
+
+		if (initPosition)
+			ReadSD(*initPosition);
+
 		return res;
 	}
 	private: System::Void button_home_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber.has_value()) // стоим где-то
+		if (PgNumber) // стоим где-то
 		{
 			auto pages = undeletedPages();
 			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-				jumpToPage(pages.begin()->first);
+				OpenPage(pages.begin()->first);
 			else // на удалённой
-				jumpToPage(0);
+				OpenPage(0);
 		}
 	}
 	private: System::Void button_next_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber.has_value()) // стоим где-то
+		if (PgNumber) // стоим где-то
 		{
 			auto pages = undeletedPages();
-			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-			{
-				auto it = pages.begin();
-				for (; it != pages.end(); it++)
-					if (it->first > *PgNumber)
-						break;
-
-				if (it != pages.end())
-					jumpToPage(it->first);
-			}
-			else // на удалённой
-				trueNext();
+			//if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+			//{
+				if (auto newPage = tryFindNext(pages))
+					OpenPage(*newPage);
+			//}
+			//else // на удалённой
+			//	trueNext();
 		}
 	}
 	private: System::Void button_back_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber.has_value()) // стоим где-то
+		if (PgNumber) // стоим где-то
 		{
 			auto pages = undeletedPages();
-			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-			{
-				auto it = pages.rbegin();
-				for (; it != pages.rend(); it++)
-					if (it->first < *PgNumber)
-						break;
+			//if (pages.find(*PgNumber) != pages.end()) // на неудалённой
+			//{
+				if (auto newPage = tryFindBack(pages))
+					OpenPage(*newPage);
+			//}
+			//else // на удалённой
+			//	trueBack();
+		}
+	}
 
-				if (it != pages.rend())
-					jumpToPage(it->first);
-			}
-			else // на удалённой
-				trueBack();
-		}
+	std::optional<int> tryFindNext(const std::map<int, int>& undeletedPages)
+	{
+		auto it = undeletedPages.begin();
+		for (; it != undeletedPages.end(); it++)
+			if (it->first > *PgNumber)
+				break;
+
+		if (it != undeletedPages.end())
+			return it->first;
+		return std::nullopt;
 	}
+	
+	std::optional<int> tryFindBack(const std::map<int, int>& undeletedPages)
+	{
+		auto it = undeletedPages.rbegin();
+		for (; it != undeletedPages.rend(); it++)
+			if (it->first < *PgNumber)
+				break;
+
+		if (it != undeletedPages.rend())
+			return it->first;
+		return std::nullopt;
+	}
+
 	private: System::Void button_end_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber.has_value()) // стоим где-то
+		if (PgNumber) // стоим где-то
 		{
 			auto pages = undeletedPages();
 			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-				jumpToPage((--pages.end())->first);
+				OpenPage((--pages.end())->first);
 			else // на удалённой
-				jumpToPage(FullSize - 1);
+				OpenPage(FullSize - 1);
 		}
 	}
-	void jumpToPage(int i)
+	void OpenPage(int i)
 	{
 		if (i != PgNumber)
 		{
 			PgNumber = i;
+			Display();
+		}
+	}
+	void ClosePage()
+	{
+		if (PgNumber)
+		{
+			PgNumber.reset();
 			Display();
 		}
 	}
@@ -713,20 +802,17 @@ namespace FormsLab1 {
 				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-				SaveData.write((char*)&SD, sizeof(SD));
+				AppendSD();
 				Display();
 				System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
 				if (result == System::Windows::Forms::DialogResult::OK){
 					this->Close();
 				}
 			}
-			else if (result == System::Windows::Forms::DialogResult::Cancel) {
-				
-			}
 		}
 	}
 	private: System::Void button_Update_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (!PgNumber.has_value())
+		if (!PgNumber)
 			return;
 
 		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите изменить данную запись?", "Изменение записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
@@ -741,79 +827,70 @@ namespace FormsLab1 {
 			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-			SaveData.seekg(*PgNumber * sizeof(SD));
-			SaveData.write((char*)&SD, sizeof(SD));
+			UpdateSD();
 		}
 	}
-private: System::Void buttonDelete_Click(System::Object^ sender, System::EventArgs^ e) {
-	if (!PgNumber.has_value())
-		return;
+	private: System::Void buttonDelete_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (!PgNumber)
+			return;
 
-	System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите удалить запись?", "Удаление записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
-	if (result == System::Windows::Forms::DialogResult::Yes) {
-		SaveData.seekp(*PgNumber * sizeof(SD));
-		SD.flag = true;
-		SaveData.write((char*)&SD, sizeof(SD));
-		if (PgNumber > 0) {
-			do {
-				PgNumber.value()--;
-				SaveData.seekp(*PgNumber * sizeof(SD));
-				SaveData.read((char*)&SD, sizeof(SD));
-				if (!SD.flag) {
-					break;
-				}
-			} 
-			while (SD.flag == true && PgNumber > 0);
-		}
-		else {
-			do {
-				PgNumber.value()++;
-				SaveData.seekp(*PgNumber * sizeof(SD));
-				SaveData.read((char*)&SD, sizeof(SD));
-				if (!SD.flag) {
-					break;
-				}
-			} 
-			while (SD.flag == true);
-		}
-
-		Display();
+		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите удалить запись?", "Удаление записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+		if (result == System::Windows::Forms::DialogResult::Yes)
+		{
+			SD.flag = true;
+			UpdateSD();
+			
+			auto pages = undeletedPages();
+			if (auto backPage = tryFindBack(pages))
+				OpenPage(*backPage);
+			else if (auto nextPage = tryFindNext(pages))
+				OpenPage(*nextPage);
+			else
+				ClosePage();
 		}
 	}
 	private: System::Void buttonflagoff_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (!PgNumber.has_value())
+		if (!PgNumber)
 			return;
 
-		SaveData.seekp(*PgNumber * sizeof(SD));
 		SD.flag = false;
-		SaveData.write((char*)&SD, sizeof(SD));
+		UpdateSD();
+
 		Display();
+	}
+	private: System::Void button_trueHome_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (FullSize == 0)
+			return;
+
+		OpenPage(0);
 	}
 	private: System::Void button_trueBack_Click(System::Object^ sender, System::EventArgs^ e) {
 		trueBack();
 	}
 	void trueBack()
 	{
-		if (!PgNumber.has_value())
+		if (!PgNumber)
 			return;
 
 		if (PgNumber > 0)
-			PgNumber.value()--;
-
-		Display();
+			OpenPage(*PgNumber - 1);
 	}
 	private: System::Void button_trueNext_Click(System::Object^ sender, System::EventArgs^ e) {
 		trueNext();
 	}
 	void trueNext()
 	{
-		if (!PgNumber.has_value())
+		if (!PgNumber)
 			return;
 
 		if (*PgNumber + 1 < FullSize)
-			PgNumber.value()++;
+			OpenPage(*PgNumber + 1);
+	}
+	private: System::Void button_trueEnd_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (FullSize == 0)
+			return;
 
-		Display();
+		OpenPage(FullSize - 1);
 	}
 };
 }
