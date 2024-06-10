@@ -336,6 +336,7 @@ namespace FormsLab1 {
 			this->textBox_Country->Name = L"textBox_Country";
 			this->textBox_Country->Size = System::Drawing::Size(215, 20);
 			this->textBox_Country->TabIndex = 12;
+			this->textBox_Country->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyLetters_KeyPress);
 			// 
 			// textBox_City
 			// 
@@ -344,6 +345,7 @@ namespace FormsLab1 {
 			this->textBox_City->Name = L"textBox_City";
 			this->textBox_City->Size = System::Drawing::Size(215, 20);
 			this->textBox_City->TabIndex = 13;
+			this->textBox_City->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyLetters_KeyPress);
 			// 
 			// textBox_ManresourceAxis
 			// 
@@ -352,6 +354,7 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAxis->Name = L"textBox_ManresourceAxis";
 			this->textBox_ManresourceAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAxis->TabIndex = 17;
+			this->textBox_ManresourceAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyInt_KeyPress);
 			// 
 			// textBox_ManresourceAllies
 			// 
@@ -360,6 +363,7 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAllies->Name = L"textBox_ManresourceAllies";
 			this->textBox_ManresourceAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAllies->TabIndex = 18;
+			this->textBox_ManresourceAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyInt_KeyPress);
 			// 
 			// textBox_LossesAxis
 			// 
@@ -368,6 +372,7 @@ namespace FormsLab1 {
 			this->textBox_LossesAxis->Name = L"textBox_LossesAxis";
 			this->textBox_LossesAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAxis->TabIndex = 19;
+			this->textBox_LossesAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyInt_KeyPress);
 			// 
 			// textBox_LossesAllies
 			// 
@@ -376,6 +381,7 @@ namespace FormsLab1 {
 			this->textBox_LossesAllies->Name = L"textBox_LossesAllies";
 			this->textBox_LossesAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAllies->TabIndex = 20;
+			this->textBox_LossesAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyInt_KeyPress);
 			// 
 			// button_SaveAll
 			// 
@@ -406,6 +412,7 @@ namespace FormsLab1 {
 			this->textBox_EventName->Name = L"textBox_EventName";
 			this->textBox_EventName->Size = System::Drawing::Size(215, 20);
 			this->textBox_EventName->TabIndex = 44;
+			this->textBox_EventName->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_OnlyLetters_KeyPress);
 			// 
 			// label_EventName
 			// 
@@ -1132,5 +1139,36 @@ namespace FormsLab1 {
 		if (radioButton_search->Checked)
 			Display();
 	}
-};
+	private: bool IsValidCharacter(wchar_t ch) {
+		// Проверка на английские буквы
+		if ((ch >= L'A' && ch <= L'Z') || (ch >= L'a' && ch <= L'z')) {
+			return true;
+		}
+
+		// Проверка на русские буквы (включая ё и Ё)
+		if ((ch >= L'А' && ch <= L'я') || ch == L'ё' || ch == L'Ё') {
+			return true;
+		}
+
+		// Проверка на пробел
+		if (ch == L' ') {
+			return true;
+		}
+
+		return false;
+	}
+
+	private: System::Void textBox_OnlyInt_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+		if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
+			e->Handled = true;
+		}
+	}
+	private: System::Void textBox_OnlyLetters_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
+		wchar_t ch = e->KeyChar;
+
+		if (!IsValidCharacter(ch) && !Char::IsControl(ch)) {
+			e->Handled = true;
+		}
+	}
+	};
 }
