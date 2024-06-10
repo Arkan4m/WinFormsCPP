@@ -6,26 +6,7 @@
 #include <string>
 #include <map>
 #include <optional>
-struct CustomData {
-public:
-	char EventName[36];
-	char StartDate[12];
-	char EndDate[12];
-	char Country[18];
-	char City[18];
-	char ManresourceAxis[12];
-	char LossesAxis[12];
-	char ManresourceAllies[12];
-	char LossesAllies[12];
-	char Winner[12];
-	bool flag = 0;
-};
-std::fstream SaveData("SavedData.bin", std::ios::in | std::ios::out);
-CustomData SD;
-// Не менять эту переменную вручную!
-// Использовать OpenPage(номер) и ClosePage()
-std::optional<int> PgNumber;
-int FullSize;
+#include <functional>
 namespace FormsLab1 {
 
 	using namespace System::IO;
@@ -38,6 +19,94 @@ namespace FormsLab1 {
 	using namespace std;
 	using namespace System::Runtime::InteropServices;
 	using namespace msclr::interop;
+	
+	string tolower(string s)
+	{
+		for (char& c : s)
+			c = std::tolower(c);
+		return s;
+	}
+
+	struct CustomData {
+	public:
+		char EventName[36];
+		char StartDate[12];
+		char EndDate[12];
+		char Country[18];
+		char City[18];
+		char ManresourceAxis[12];
+		char LossesAxis[12];
+		char ManresourceAllies[12];
+		char LossesAllies[12];
+		char Winner[12];
+		bool flag = 0;
+	};
+	std::fstream SaveData("SavedData.bin", std::ios::in | std::ios::out);
+	CustomData SD;
+	struct Search
+	{
+		optional<string> EventName;
+		optional<string> StartDate;
+		optional<string> EndDate;
+		optional<string> Country;
+		optional<string> City;
+		optional<string> Winner;
+
+		bool SDAllMatches() const
+		{
+			if (EventName && !EventNameMatches())
+				return false;
+			if (StartDate && !StartDateMatches())
+				return false;
+			if (EndDate && !EndDateMatches())
+				return false;
+			if (Country && !CountryMatches())
+				return false;
+			if (City && !CityMatches())
+				return false;
+			if (Winner && !WinnerMatches())
+				return false;
+			return true;
+		}
+
+		bool SDAnyMatches() const
+		{
+			// Нет критериев = подходит
+			if (!EventName && !StartDate && !EndDate && !Country && !City && !Winner)
+				return true;
+
+			if (EventName && EventNameMatches())
+				return true;
+			if (StartDate && StartDateMatches())
+				return true;
+			if (EndDate && EndDateMatches())
+				return true;
+			if (Country && CountryMatches())
+				return true;
+			if (City && CityMatches())
+				return true;
+			if (Winner && WinnerMatches())
+				return true;
+			return false;
+		}
+
+	private:
+		bool EventNameMatches() const
+		{
+			auto res = tolower(SD.EventName);
+			return res.find(*EventName) != string::npos;
+		}
+		bool StartDateMatches() const { return StartDate == string(SD.StartDate); }
+		bool EndDateMatches() const { return EndDate == string(SD.EndDate); }
+		bool CountryMatches() const { return tolower(SD.Country).find(*Country) != string::npos; }
+		bool CityMatches() const { return tolower(SD.City).find(*City) != string::npos; }
+		bool WinnerMatches() const { return Winner == string(SD.Winner); }
+	};
+	Search SearchFor;
+	// Не менять эту переменную вручную!
+	// Использовать OpenPage(номер) и ClosePage()
+	std::optional<int> PgNumber;
+	int FullSize;
 
 	public ref class Form1 : public System::Windows::Forms::Form
 	{
@@ -45,13 +114,12 @@ namespace FormsLab1 {
 		Form1(void)
 		{
 			InitializeComponent();
+			setlocale(LC_ALL, "ru_RU");
 			if (SaveData.is_open())
 			{
 				SaveData.seekp(0, std::ios::end);
 				FullSize = SaveData.tellg() / sizeof(SD);
-				auto pages = undeletedPages();
-				if (!pages.empty())
-					PgNumber = pages.begin()->first;
+				home();
 				SaveData.seekp(0);
 			}
 			else
@@ -91,16 +159,35 @@ namespace FormsLab1 {
 	private: System::Windows::Forms::ComboBox^ comboBox_Winner;
 	private: System::Windows::Forms::Button^ buttonExit;
 	private: System::Windows::Forms::Button^ buttonDelete;
-	private: System::Windows::Forms::Button^ button_trueBack;
-	private: System::Windows::Forms::Button^ button_trueNext;
+
+
 	private: System::Windows::Forms::Label^ label_Pages;
 	private: System::Windows::Forms::Button^ button_Update;
 	private: System::Windows::Forms::DateTimePicker^ dateTimePicker_StartDate;
 	private: System::Windows::Forms::Label^ label_EndDate;
 	private: System::Windows::Forms::DateTimePicker^ dateTimePicker_EndDate;
 	private: System::Windows::Forms::Button^ button_flagoff;
-	private: System::Windows::Forms::Button^ button_trueHome;
-	private: System::Windows::Forms::Button^ button_trueEnd;
+
+
+	private: System::Windows::Forms::RadioButton^ radioButton_all;
+	private: System::Windows::Forms::RadioButton^ radioButton_search;
+
+	private: System::Windows::Forms::CheckBox^ checkBox_deleted;
+	private: System::Windows::Forms::Label^ label1;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_EventName;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_StartDate;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_EndDate;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_Country;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_City;
+	private: System::Windows::Forms::CheckBox^ checkBox_search_Winner;
+	private: System::Windows::Forms::Button^ button_updateSearch;
+	private: System::Windows::Forms::CheckBox^ checkBox_anyOf;
+
+
+
+
+
+
 
 	private: System::ComponentModel::IContainer^ components;
 
@@ -140,10 +227,18 @@ namespace FormsLab1 {
 			this->label_EndDate = (gcnew System::Windows::Forms::Label());
 			this->dateTimePicker_EndDate = (gcnew System::Windows::Forms::DateTimePicker());
 			this->button_flagoff = (gcnew System::Windows::Forms::Button());
-			this->button_trueBack = (gcnew System::Windows::Forms::Button());
-			this->button_trueNext = (gcnew System::Windows::Forms::Button());
-			this->button_trueHome = (gcnew System::Windows::Forms::Button());
-			this->button_trueEnd = (gcnew System::Windows::Forms::Button());
+			this->radioButton_all = (gcnew System::Windows::Forms::RadioButton());
+			this->radioButton_search = (gcnew System::Windows::Forms::RadioButton());
+			this->checkBox_deleted = (gcnew System::Windows::Forms::CheckBox());
+			this->label1 = (gcnew System::Windows::Forms::Label());
+			this->checkBox_search_EventName = (gcnew System::Windows::Forms::CheckBox());
+			this->checkBox_search_StartDate = (gcnew System::Windows::Forms::CheckBox());
+			this->checkBox_search_EndDate = (gcnew System::Windows::Forms::CheckBox());
+			this->checkBox_search_Country = (gcnew System::Windows::Forms::CheckBox());
+			this->checkBox_search_City = (gcnew System::Windows::Forms::CheckBox());
+			this->checkBox_search_Winner = (gcnew System::Windows::Forms::CheckBox());
+			this->button_updateSearch = (gcnew System::Windows::Forms::Button());
+			this->checkBox_anyOf = (gcnew System::Windows::Forms::CheckBox());
 			this->SuspendLayout();
 			// 
 			// label_StartDate
@@ -241,7 +336,6 @@ namespace FormsLab1 {
 			this->textBox_Country->Name = L"textBox_Country";
 			this->textBox_Country->Size = System::Drawing::Size(215, 20);
 			this->textBox_Country->TabIndex = 12;
-			this->textBox_Country->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_Country_KeyPress);
 			// 
 			// textBox_City
 			// 
@@ -250,7 +344,6 @@ namespace FormsLab1 {
 			this->textBox_City->Name = L"textBox_City";
 			this->textBox_City->Size = System::Drawing::Size(215, 20);
 			this->textBox_City->TabIndex = 13;
-			this->textBox_City->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_City_KeyPress);
 			// 
 			// textBox_ManresourceAxis
 			// 
@@ -259,7 +352,6 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAxis->Name = L"textBox_ManresourceAxis";
 			this->textBox_ManresourceAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAxis->TabIndex = 17;
-			this->textBox_ManresourceAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_ManresourceAxis_KeyPress);
 			// 
 			// textBox_ManresourceAllies
 			// 
@@ -268,7 +360,6 @@ namespace FormsLab1 {
 			this->textBox_ManresourceAllies->Name = L"textBox_ManresourceAllies";
 			this->textBox_ManresourceAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_ManresourceAllies->TabIndex = 18;
-			this->textBox_ManresourceAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_ManresourceAllies_KeyPress);
 			// 
 			// textBox_LossesAxis
 			// 
@@ -277,7 +368,6 @@ namespace FormsLab1 {
 			this->textBox_LossesAxis->Name = L"textBox_LossesAxis";
 			this->textBox_LossesAxis->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAxis->TabIndex = 19;
-			this->textBox_LossesAxis->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_LossesAxis_KeyPress);
 			// 
 			// textBox_LossesAllies
 			// 
@@ -286,12 +376,11 @@ namespace FormsLab1 {
 			this->textBox_LossesAllies->Name = L"textBox_LossesAllies";
 			this->textBox_LossesAllies->Size = System::Drawing::Size(215, 20);
 			this->textBox_LossesAllies->TabIndex = 20;
-			this->textBox_LossesAllies->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_LossesAllies_KeyPress);
 			// 
 			// button_SaveAll
 			// 
 			this->button_SaveAll->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_SaveAll->Location = System::Drawing::Point(224, 326);
+			this->button_SaveAll->Location = System::Drawing::Point(251, 326);
 			this->button_SaveAll->Name = L"button_SaveAll";
 			this->button_SaveAll->Size = System::Drawing::Size(116, 23);
 			this->button_SaveAll->TabIndex = 42;
@@ -302,7 +391,7 @@ namespace FormsLab1 {
 			// button_ClearAll
 			// 
 			this->button_ClearAll->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_ClearAll->Location = System::Drawing::Point(469, 326);
+			this->button_ClearAll->Location = System::Drawing::Point(496, 326);
 			this->button_ClearAll->Name = L"button_ClearAll";
 			this->button_ClearAll->Size = System::Drawing::Size(110, 23);
 			this->button_ClearAll->TabIndex = 43;
@@ -317,7 +406,6 @@ namespace FormsLab1 {
 			this->textBox_EventName->Name = L"textBox_EventName";
 			this->textBox_EventName->Size = System::Drawing::Size(215, 20);
 			this->textBox_EventName->TabIndex = 44;
-			this->textBox_EventName->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &Form1::textBox_EventName_KeyPress);
 			// 
 			// label_EventName
 			// 
@@ -334,7 +422,7 @@ namespace FormsLab1 {
 			// button_home
 			// 
 			this->button_home->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_home->Location = System::Drawing::Point(346, 326);
+			this->button_home->Location = System::Drawing::Point(373, 326);
 			this->button_home->Name = L"button_home";
 			this->button_home->Size = System::Drawing::Size(27, 23);
 			this->button_home->TabIndex = 48;
@@ -345,7 +433,7 @@ namespace FormsLab1 {
 			// button_back
 			// 
 			this->button_back->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_back->Location = System::Drawing::Point(376, 326);
+			this->button_back->Location = System::Drawing::Point(403, 326);
 			this->button_back->Name = L"button_back";
 			this->button_back->Size = System::Drawing::Size(27, 23);
 			this->button_back->TabIndex = 49;
@@ -356,7 +444,7 @@ namespace FormsLab1 {
 			// button_end
 			// 
 			this->button_end->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_end->Location = System::Drawing::Point(436, 326);
+			this->button_end->Location = System::Drawing::Point(463, 326);
 			this->button_end->Name = L"button_end";
 			this->button_end->Size = System::Drawing::Size(27, 23);
 			this->button_end->TabIndex = 50;
@@ -367,7 +455,7 @@ namespace FormsLab1 {
 			// button_next
 			// 
 			this->button_next->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_next->Location = System::Drawing::Point(406, 326);
+			this->button_next->Location = System::Drawing::Point(433, 326);
 			this->button_next->Name = L"button_next";
 			this->button_next->Size = System::Drawing::Size(27, 23);
 			this->button_next->TabIndex = 51;
@@ -401,7 +489,7 @@ namespace FormsLab1 {
 			this->buttonDelete->Cursor = System::Windows::Forms::Cursors::Hand;
 			this->buttonDelete->Location = System::Drawing::Point(8, 326);
 			this->buttonDelete->Name = L"buttonDelete";
-			this->buttonDelete->Size = System::Drawing::Size(99, 23);
+			this->buttonDelete->Size = System::Drawing::Size(126, 23);
 			this->buttonDelete->TabIndex = 55;
 			this->buttonDelete->Text = L"Удалить запись";
 			this->buttonDelete->UseVisualStyleBackColor = true;
@@ -412,17 +500,17 @@ namespace FormsLab1 {
 			this->label_Pages->AutoSize = true;
 			this->label_Pages->BorderStyle = System::Windows::Forms::BorderStyle::Fixed3D;
 			this->label_Pages->Font = (gcnew System::Drawing::Font(L"Arial Black", 9, System::Drawing::FontStyle::Bold));
-			this->label_Pages->Location = System::Drawing::Point(349, 304);
+			this->label_Pages->Location = System::Drawing::Point(376, 304);
 			this->label_Pages->Name = L"label_Pages";
-			this->label_Pages->Size = System::Drawing::Size(106, 19);
+			this->label_Pages->Size = System::Drawing::Size(105, 19);
 			this->label_Pages->TabIndex = 57;
-			this->label_Pages->Text = L"Запись: 1 из 4";
+			this->label_Pages->Text = L"Запись: \? из 0";
 			this->label_Pages->TextAlign = System::Drawing::ContentAlignment::MiddleCenter;
 			// 
 			// button_Update
 			// 
 			this->button_Update->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_Update->Location = System::Drawing::Point(113, 326);
+			this->button_Update->Location = System::Drawing::Point(140, 326);
 			this->button_Update->Name = L"button_Update";
 			this->button_Update->Size = System::Drawing::Size(105, 23);
 			this->button_Update->TabIndex = 58;
@@ -465,57 +553,161 @@ namespace FormsLab1 {
 			// 
 			// button_flagoff
 			// 
-			this->button_flagoff->Location = System::Drawing::Point(585, 326);
+			this->button_flagoff->Location = System::Drawing::Point(8, 326);
 			this->button_flagoff->Name = L"button_flagoff";
-			this->button_flagoff->Size = System::Drawing::Size(80, 23);
+			this->button_flagoff->Size = System::Drawing::Size(126, 23);
 			this->button_flagoff->TabIndex = 62;
-			this->button_flagoff->Text = L"Убрать флаг";
+			this->button_flagoff->Text = L"Восстановить запись";
 			this->button_flagoff->UseVisualStyleBackColor = true;
 			this->button_flagoff->Click += gcnew System::EventHandler(this, &Form1::buttonflagoff_Click);
 			// 
-			// button_trueBack
+			// radioButton_all
 			// 
-			this->button_trueBack->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_trueBack->Location = System::Drawing::Point(376, 278);
-			this->button_trueBack->Name = L"button_trueBack";
-			this->button_trueBack->Size = System::Drawing::Size(27, 23);
-			this->button_trueBack->TabIndex = 63;
-			this->button_trueBack->Text = L"<";
-			this->button_trueBack->UseVisualStyleBackColor = true;
-			this->button_trueBack->Click += gcnew System::EventHandler(this, &Form1::button_trueBack_Click);
+			this->radioButton_all->AutoSize = true;
+			this->radioButton_all->BackColor = System::Drawing::Color::Transparent;
+			this->radioButton_all->Checked = true;
+			this->radioButton_all->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(204)));
+			this->radioButton_all->Location = System::Drawing::Point(556, 40);
+			this->radioButton_all->Name = L"radioButton_all";
+			this->radioButton_all->Size = System::Drawing::Size(47, 17);
+			this->radioButton_all->TabIndex = 67;
+			this->radioButton_all->TabStop = true;
+			this->radioButton_all->Text = L"Все";
+			this->radioButton_all->UseVisualStyleBackColor = false;
 			// 
-			// button_trueNext
+			// radioButton_search
 			// 
-			this->button_trueNext->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_trueNext->Location = System::Drawing::Point(406, 278);
-			this->button_trueNext->Name = L"button_trueNext";
-			this->button_trueNext->Size = System::Drawing::Size(27, 23);
-			this->button_trueNext->TabIndex = 64;
-			this->button_trueNext->Text = L">";
-			this->button_trueNext->UseVisualStyleBackColor = true;
-			this->button_trueNext->Click += gcnew System::EventHandler(this, &Form1::button_trueNext_Click);
+			this->radioButton_search->AutoSize = true;
+			this->radioButton_search->BackColor = System::Drawing::Color::Transparent;
+			this->radioButton_search->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(204)));
+			this->radioButton_search->Location = System::Drawing::Point(556, 65);
+			this->radioButton_search->Name = L"radioButton_search";
+			this->radioButton_search->Size = System::Drawing::Size(62, 17);
+			this->radioButton_search->TabIndex = 68;
+			this->radioButton_search->Text = L"Поиск";
+			this->radioButton_search->UseVisualStyleBackColor = false;
+			this->radioButton_search->CheckedChanged += gcnew System::EventHandler(this, &Form1::radioButton_search_CheckedChanged);
 			// 
-			// button_trueHome
+			// checkBox_deleted
 			// 
-			this->button_trueHome->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_trueHome->Location = System::Drawing::Point(346, 278);
-			this->button_trueHome->Name = L"button_trueHome";
-			this->button_trueHome->Size = System::Drawing::Size(27, 23);
-			this->button_trueHome->TabIndex = 65;
-			this->button_trueHome->Text = L"<<";
-			this->button_trueHome->UseVisualStyleBackColor = true;
-			this->button_trueHome->Click += gcnew System::EventHandler(this, &Form1::button_trueHome_Click);
+			this->checkBox_deleted->AutoSize = true;
+			this->checkBox_deleted->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_deleted->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(204)));
+			this->checkBox_deleted->ForeColor = System::Drawing::Color::Black;
+			this->checkBox_deleted->Location = System::Drawing::Point(556, 92);
+			this->checkBox_deleted->Name = L"checkBox_deleted";
+			this->checkBox_deleted->Size = System::Drawing::Size(93, 17);
+			this->checkBox_deleted->TabIndex = 69;
+			this->checkBox_deleted->Text = L"Удалённые";
+			this->checkBox_deleted->UseVisualStyleBackColor = false;
+			this->checkBox_deleted->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_deleted_CheckedChanged);
 			// 
-			// button_trueEnd
+			// label1
 			// 
-			this->button_trueEnd->Cursor = System::Windows::Forms::Cursors::Hand;
-			this->button_trueEnd->Location = System::Drawing::Point(436, 278);
-			this->button_trueEnd->Name = L"button_trueEnd";
-			this->button_trueEnd->Size = System::Drawing::Size(27, 23);
-			this->button_trueEnd->TabIndex = 66;
-			this->button_trueEnd->Text = L">>";
-			this->button_trueEnd->UseVisualStyleBackColor = true;
-			this->button_trueEnd->Click += gcnew System::EventHandler(this, &Form1::button_trueEnd_Click);
+			this->label1->AutoSize = true;
+			this->label1->BackColor = System::Drawing::Color::White;
+			this->label1->BorderStyle = System::Windows::Forms::BorderStyle::Fixed3D;
+			this->label1->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 9.75F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(204)));
+			this->label1->Location = System::Drawing::Point(556, 13);
+			this->label1->Name = L"label1";
+			this->label1->Size = System::Drawing::Size(112, 18);
+			this->label1->TabIndex = 70;
+			this->label1->Text = L"Перемещение";
+			// 
+			// checkBox_search_EventName
+			// 
+			this->checkBox_search_EventName->AutoSize = true;
+			this->checkBox_search_EventName->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_EventName->Location = System::Drawing::Point(520, 14);
+			this->checkBox_search_EventName->Name = L"checkBox_search_EventName";
+			this->checkBox_search_EventName->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_EventName->TabIndex = 71;
+			this->checkBox_search_EventName->UseVisualStyleBackColor = false;
+			this->checkBox_search_EventName->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// checkBox_search_StartDate
+			// 
+			this->checkBox_search_StartDate->AutoSize = true;
+			this->checkBox_search_StartDate->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_StartDate->Location = System::Drawing::Point(520, 40);
+			this->checkBox_search_StartDate->Name = L"checkBox_search_StartDate";
+			this->checkBox_search_StartDate->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_StartDate->TabIndex = 72;
+			this->checkBox_search_StartDate->UseVisualStyleBackColor = false;
+			this->checkBox_search_StartDate->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// checkBox_search_EndDate
+			// 
+			this->checkBox_search_EndDate->AutoSize = true;
+			this->checkBox_search_EndDate->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_EndDate->Location = System::Drawing::Point(520, 67);
+			this->checkBox_search_EndDate->Name = L"checkBox_search_EndDate";
+			this->checkBox_search_EndDate->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_EndDate->TabIndex = 73;
+			this->checkBox_search_EndDate->UseVisualStyleBackColor = false;
+			this->checkBox_search_EndDate->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// checkBox_search_Country
+			// 
+			this->checkBox_search_Country->AutoSize = true;
+			this->checkBox_search_Country->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_Country->Location = System::Drawing::Point(520, 93);
+			this->checkBox_search_Country->Name = L"checkBox_search_Country";
+			this->checkBox_search_Country->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_Country->TabIndex = 74;
+			this->checkBox_search_Country->UseVisualStyleBackColor = false;
+			this->checkBox_search_Country->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// checkBox_search_City
+			// 
+			this->checkBox_search_City->AutoSize = true;
+			this->checkBox_search_City->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_City->Location = System::Drawing::Point(520, 122);
+			this->checkBox_search_City->Name = L"checkBox_search_City";
+			this->checkBox_search_City->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_City->TabIndex = 75;
+			this->checkBox_search_City->UseVisualStyleBackColor = false;
+			this->checkBox_search_City->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// checkBox_search_Winner
+			// 
+			this->checkBox_search_Winner->AutoSize = true;
+			this->checkBox_search_Winner->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_search_Winner->Location = System::Drawing::Point(520, 255);
+			this->checkBox_search_Winner->Name = L"checkBox_search_Winner";
+			this->checkBox_search_Winner->Size = System::Drawing::Size(15, 14);
+			this->checkBox_search_Winner->TabIndex = 76;
+			this->checkBox_search_Winner->UseVisualStyleBackColor = false;
+			this->checkBox_search_Winner->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
+			// 
+			// button_updateSearch
+			// 
+			this->button_updateSearch->Location = System::Drawing::Point(612, 326);
+			this->button_updateSearch->Name = L"button_updateSearch";
+			this->button_updateSearch->Size = System::Drawing::Size(196, 23);
+			this->button_updateSearch->TabIndex = 77;
+			this->button_updateSearch->Text = L"Обновить информацию для поиска";
+			this->button_updateSearch->UseVisualStyleBackColor = true;
+			this->button_updateSearch->Click += gcnew System::EventHandler(this, &Form1::button_updateSearch_Click);
+			// 
+			// checkBox_anyOf
+			// 
+			this->checkBox_anyOf->AutoSize = true;
+			this->checkBox_anyOf->BackColor = System::Drawing::Color::Transparent;
+			this->checkBox_anyOf->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 8.25F, System::Drawing::FontStyle::Bold, System::Drawing::GraphicsUnit::Point,
+				static_cast<System::Byte>(204)));
+			this->checkBox_anyOf->ForeColor = System::Drawing::Color::Black;
+			this->checkBox_anyOf->Location = System::Drawing::Point(556, 115);
+			this->checkBox_anyOf->Name = L"checkBox_anyOf";
+			this->checkBox_anyOf->Size = System::Drawing::Size(49, 17);
+			this->checkBox_anyOf->TabIndex = 78;
+			this->checkBox_anyOf->Text = L"Или";
+			this->checkBox_anyOf->UseVisualStyleBackColor = false;
+			this->checkBox_anyOf->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox_search_CheckedChanged);
 			// 
 			// Form1
 			// 
@@ -525,10 +717,18 @@ namespace FormsLab1 {
 			this->BackgroundImage = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"$this.BackgroundImage")));
 			this->BackgroundImageLayout = System::Windows::Forms::ImageLayout::Stretch;
 			this->ClientSize = System::Drawing::Size(884, 361);
-			this->Controls->Add(this->button_trueEnd);
-			this->Controls->Add(this->button_trueHome);
-			this->Controls->Add(this->button_trueNext);
-			this->Controls->Add(this->button_trueBack);
+			this->Controls->Add(this->checkBox_anyOf);
+			this->Controls->Add(this->button_updateSearch);
+			this->Controls->Add(this->checkBox_search_Winner);
+			this->Controls->Add(this->checkBox_search_City);
+			this->Controls->Add(this->checkBox_search_Country);
+			this->Controls->Add(this->checkBox_search_EndDate);
+			this->Controls->Add(this->checkBox_search_StartDate);
+			this->Controls->Add(this->checkBox_search_EventName);
+			this->Controls->Add(this->label1);
+			this->Controls->Add(this->checkBox_deleted);
+			this->Controls->Add(this->radioButton_search);
+			this->Controls->Add(this->radioButton_all);
 			this->Controls->Add(this->button_flagoff);
 			this->Controls->Add(this->dateTimePicker_EndDate);
 			this->Controls->Add(this->label_EndDate);
@@ -574,6 +774,13 @@ namespace FormsLab1 {
 #pragma endregion
 	
 	Void Display() {
+		auto pages = getPages();
+		if (PgNumber && pages.find(*PgNumber) == pages.end())
+			if (pages.empty())
+				PgNumber.reset();
+			else
+				PgNumber = pages.begin()->first;
+
 		if (PgNumber)
 		{
 			ReadSD(*PgNumber);
@@ -602,26 +809,14 @@ namespace FormsLab1 {
 			comboBox_Winner->ResetText();
 		}
 
-		auto pages = undeletedPages();
+		int page = PgNumber ? pages.at(*PgNumber) : 0;
+		bool deleted = PgNumber ? SD.flag : false;
+		int count = pages.size();
 
-		int page = 0, count = 0;
-		bool deleted = false;
-		if (PgNumber) // стоим где-то
-		{
-			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-			{
-				page = pages[*PgNumber];
-				count = pages.size();
-			}
-			else // на удалённой
-			{
-				page = *PgNumber + 1;
-				count = FullSize;
-				deleted = true;
-			}
-		}
+		this->buttonDelete->Visible = !deleted;
+		this->button_flagoff->Visible = deleted;
 
-		label_Pages->Text = "Запись: " + page + " из " + count + (deleted ? " (все)" : "");
+		label_Pages->Text = "Запись: " + (page == 0 ? "?" : page.ToString()) + " из " + count + (deleted ? " (удалена)" : "");
 	}
 	void ReadSD(int i) {
 		if (!(0 <= i && i < FullSize))
@@ -645,6 +840,7 @@ namespace FormsLab1 {
 	}
 	void AppendSD()
 	{
+		FullSize++;
 		SaveData.seekp(0, std::ios::end);
 		SaveData.write((char*)&SD, sizeof(SD));
 	}
@@ -664,129 +860,140 @@ namespace FormsLab1 {
 		comboBox_Winner->Text = "";
 	}
 	private: System::Void button_SaveAll_Click(System::Object^ sender, System::EventArgs^ e) {
-		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите добавить новую запись?", "Добавление новой записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
-		if (result == System::Windows::Forms::DialogResult::Yes) {
-			if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
-				String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
-				String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
-				String::IsNullOrWhiteSpace(textBox_Country->Text) ||
-				String::IsNullOrWhiteSpace(textBox_City->Text) ||
-				String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
-				String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
-				String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
-				String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
-				String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
-				MessageBox::Show("Вы оставили пустое поле!");
-			}
-			else {
-				FullSize++;
-				PgNumber = FullSize - 1;
-				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
-				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
-				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
-				strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
-				strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
-				strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
-				strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
-				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
-				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
-				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-				AppendSD();
-				Display();
-			}
+		string eventName = marshal_as<string>(this->textBox_EventName->Text);
+		if (GetPageByEventName(eventName))
+		{
+			MessageBox::Show("Запись с таким названием уже существует", "Дублирование", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			return;
+		}
+
+		Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите добавить новую запись?", "Добавление новой записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+		if (result == Windows::Forms::DialogResult::Yes) {
+			strcpy(SD.EventName, eventName.c_str());
+			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
+			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
+			strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
+			strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
+			strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
+			strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
+			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
+			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
+			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+			SD.flag = false;
+			AppendSD();
+
+			OpenPage(FullSize - 1);
 		}
 	}
-	std::map<int, int> undeletedPages()
+	optional<int> GetPageByEventName(const string& eventName)
 	{
-		std::optional<int> initPosition = PgNumber;
+		auto currentPage = PgNumber;
 
+		for (int i = 0; i < FullSize; i++)
+		{
+			ReadSD(i);
+			if (SD.EventName == eventName)
+			{
+				if (currentPage)
+					ReadSD(*currentPage);
+				return i;
+			}
+		}
+
+		if (currentPage)
+			ReadSD(*currentPage);
+		return {};
+	}
+	std::map<int, int> getPages()
+	{
 		std::map<int, int> res;
 		int display = 1;
 		for (int real = 0; real < FullSize; real++)
 		{
-			ReadSD(real);
-			if (!SD.flag)
+			if (radioButton_all->Checked)
 			{
-				res.insert({real, display});
-				display++;
+				if (!checkBox_deleted->Checked)
+				{
+					ReadSD(real);
+					if (SD.flag)
+						continue;
+				}
 			}
+			else if (radioButton_search->Checked)
+			{
+				ReadSD(real);
+				if (SD.flag && !checkBox_deleted->Checked)
+					continue;
+
+				if (!(checkBox_anyOf->Checked ? SearchFor.SDAnyMatches() : SearchFor.SDAllMatches()))
+					continue;
+			}
+			else
+				throw std::exception();
+
+			res.insert({real, display});
+			display++;
 		}
 
-		if (initPosition)
-			ReadSD(*initPosition);
+		if (PgNumber)
+			ReadSD(*PgNumber);
 
 		return res;
 	}
 	private: System::Void button_home_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber) // стоим где-то
-		{
-			auto pages = undeletedPages();
-			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-				OpenPage(pages.begin()->first);
-			else // на удалённой
-				OpenPage(0);
-		}
+		home();
+	}
+	void home()
+	{
+		auto pages = getPages();
+		auto firstPage = pages.begin();
+		if (firstPage != pages.end())
+			OpenPage(firstPage->first);
 	}
 	private: System::Void button_next_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber) // стоим где-то
+		if (PgNumber)
 		{
-			auto pages = undeletedPages();
-			//if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-			//{
-				if (auto newPage = tryFindNext(pages))
-					OpenPage(*newPage);
-			//}
-			//else // на удалённой
-			//	trueNext();
+			auto pages = getPages();
+			if (auto newPage = tryFindNext(pages))
+				OpenPage(*newPage);
 		}
 	}
 	private: System::Void button_back_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber) // стоим где-то
+		if (PgNumber)
 		{
-			auto pages = undeletedPages();
-			//if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-			//{
-				if (auto newPage = tryFindBack(pages))
-					OpenPage(*newPage);
-			//}
-			//else // на удалённой
-			//	trueBack();
+			auto pages = getPages();
+			if (auto newPage = tryFindBack(pages))
+				OpenPage(*newPage);
 		}
 	}
-
-	std::optional<int> tryFindNext(const std::map<int, int>& undeletedPages)
+	std::optional<int> tryFindNext(const std::map<int, int>& pages)
 	{
-		auto it = undeletedPages.begin();
-		for (; it != undeletedPages.end(); it++)
+		auto it = pages.begin();
+		for (; it != pages.end(); it++)
 			if (it->first > *PgNumber)
 				break;
 
-		if (it != undeletedPages.end())
+		if (it != pages.end())
 			return it->first;
 		return std::nullopt;
 	}
-	
-	std::optional<int> tryFindBack(const std::map<int, int>& undeletedPages)
+	std::optional<int> tryFindBack(const std::map<int, int>& pages)
 	{
-		auto it = undeletedPages.rbegin();
-		for (; it != undeletedPages.rend(); it++)
+		auto it = pages.rbegin();
+		for (; it != pages.rend(); it++)
 			if (it->first < *PgNumber)
 				break;
 
-		if (it != undeletedPages.rend())
+		if (it != pages.rend())
 			return it->first;
 		return std::nullopt;
 	}
 
 	private: System::Void button_end_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (PgNumber) // стоим где-то
-		{
-			auto pages = undeletedPages();
-			if (pages.find(*PgNumber) != pages.end()) // на неудалённой
-				OpenPage((--pages.end())->first);
-			else // на удалённой
-				OpenPage(FullSize - 1);
-		}
+		auto pages = getPages();
+		auto lastPage = pages.rbegin();
+		if (lastPage != pages.rend())
+			OpenPage(lastPage->first);
 	}
 	void OpenPage(int i)
 	{
@@ -812,60 +1019,14 @@ namespace FormsLab1 {
 				this->Close();
 			}
 			else if (result == System::Windows::Forms::DialogResult::Yes) {
-				if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
-					String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
-					String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
-					String::IsNullOrWhiteSpace(textBox_Country->Text) ||
-					String::IsNullOrWhiteSpace(textBox_City->Text) ||
-					String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
-					String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
-					String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
-					String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
-					String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
-					MessageBox::Show("Вы оставили пустое поле!");
+				string eventName = marshal_as<string>(this->textBox_EventName->Text);
+				if (GetPageByEventName(eventName))
+				{
+					MessageBox::Show("Запись с таким названием уже существует", "Дублирование", MessageBoxButtons::OK, MessageBoxIcon::Error);
+					return;
 				}
-				else {
-					FullSize++;
-					PgNumber = FullSize - 1;
-					strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
-					strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
-					strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
-					strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
-					strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
-					strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
-					strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
-					strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
-					strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
-					strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-					AppendSD();
-					Display();
-					System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
-					if (result == System::Windows::Forms::DialogResult::OK) {
-						this->Close();
-				}
-				}
-			}
-		}
-	}
-	private: System::Void button_Update_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (!PgNumber)
-			return;
-
-		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите изменить данную запись?", "Изменение записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
-		if (result == System::Windows::Forms::DialogResult::Yes) {
-			if (String::IsNullOrWhiteSpace(textBox_EventName->Text) ||
-				String::IsNullOrWhiteSpace(dateTimePicker_StartDate->Text) ||
-				String::IsNullOrWhiteSpace(dateTimePicker_EndDate->Text) ||
-				String::IsNullOrWhiteSpace(textBox_Country->Text) ||
-				String::IsNullOrWhiteSpace(textBox_City->Text) ||
-				String::IsNullOrWhiteSpace(textBox_ManresourceAxis->Text) ||
-				String::IsNullOrWhiteSpace(textBox_LossesAxis->Text) ||
-				String::IsNullOrWhiteSpace(textBox_ManresourceAllies->Text) ||
-				String::IsNullOrWhiteSpace(textBox_LossesAllies->Text) ||
-				String::IsNullOrWhiteSpace(comboBox_Winner->Text)) {
-				MessageBox::Show("Вы оставили пустое поле!");
-			}
-			else {
+				FullSize++;
+				PgNumber = FullSize - 1;
 				strcpy(SD.EventName, marshal_as<string>(this->textBox_EventName->Text).c_str());
 				strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
 				strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
@@ -876,8 +1037,39 @@ namespace FormsLab1 {
 				strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
 				strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
 				strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
-				UpdateSD();
+				AppendSD();
+				Display();
+				System::Windows::Forms::DialogResult result = MessageBox::Show("Запись успешно добавлена!", "Успех", MessageBoxButtons::OK, MessageBoxIcon::Asterisk);
+				if (result == System::Windows::Forms::DialogResult::OK){
+					this->Close();
+				}
 			}
+		}
+	}
+	private: System::Void button_Update_Click(System::Object^ sender, System::EventArgs^ e) {
+		if (!PgNumber)
+			return;
+
+		string eventName = marshal_as<string>(this->textBox_EventName->Text);
+		if (GetPageByEventName(eventName) != *PgNumber)
+		{
+			MessageBox::Show("Запись с таким названием уже существует", "Дублирование", MessageBoxButtons::OK, MessageBoxIcon::Error);
+			return;
+		}
+
+		System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены, что хотите изменить данную запись?", "Изменение записи", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+		if (result == System::Windows::Forms::DialogResult::Yes) {
+			strcpy(SD.EventName, eventName.c_str());
+			strcpy(SD.StartDate, marshal_as<string>(this->dateTimePicker_StartDate->Text).c_str());
+			strcpy(SD.EndDate, marshal_as<string>(this->dateTimePicker_EndDate->Text).c_str());
+			strcpy(SD.Country, marshal_as<string>(this->textBox_Country->Text).c_str());
+			strcpy(SD.City, marshal_as<string>(this->textBox_City->Text).c_str());
+			strcpy(SD.ManresourceAxis, marshal_as<string>(this->textBox_ManresourceAxis->Text).c_str());
+			strcpy(SD.LossesAxis, marshal_as<string>(this->textBox_LossesAxis->Text).c_str());
+			strcpy(SD.ManresourceAllies, marshal_as<string>(this->textBox_ManresourceAllies->Text).c_str());
+			strcpy(SD.LossesAllies, marshal_as<string>(this->textBox_LossesAllies->Text).c_str());
+			strcpy(SD.Winner, marshal_as<string>(this->comboBox_Winner->Text).c_str());
+			UpdateSD();
 		}
 	}
 	private: System::Void buttonDelete_Click(System::Object^ sender, System::EventArgs^ e) {
@@ -890,13 +1082,18 @@ namespace FormsLab1 {
 			SD.flag = true;
 			UpdateSD();
 			
-			auto pages = undeletedPages();
-			if (auto backPage = tryFindBack(pages))
-				OpenPage(*backPage);
-			else if (auto nextPage = tryFindNext(pages))
-				OpenPage(*nextPage);
+			if (!checkBox_deleted->Checked)
+			{
+				auto pages = getPages();
+				if (auto backPage = tryFindBack(pages))
+					OpenPage(*backPage);
+				else if (auto nextPage = tryFindNext(pages))
+					OpenPage(*nextPage);
+				else
+					ClosePage();
+			}
 			else
-				ClosePage();
+				Display();
 		}
 	}
 	private: System::Void buttonflagoff_Click(System::Object^ sender, System::EventArgs^ e) {
@@ -908,92 +1105,32 @@ namespace FormsLab1 {
 
 		Display();
 	}
-	private: System::Void button_trueHome_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (FullSize == 0)
-			return;
+	private: System::Void checkBox_deleted_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		if (!checkBox_deleted->Checked && SD.flag)
+			ClosePage();
+		else
+			Display();
+	}
+	private: System::Void radioButton_search_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		Display();
+	}
+	private: System::Void checkBox_search_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		if (radioButton_search->Checked)
+			Display();
+	}
+	private: System::Void button_updateSearch_Click(System::Object^ sender, System::EventArgs^ e) {
+		SearchFor = Search
+		{
+			!checkBox_search_EventName->Checked ? nullopt : (optional<string>)marshal_as<string>(textBox_EventName->Text->Trim()->ToLower()),
+			!checkBox_search_StartDate->Checked ? nullopt : (optional<string>)marshal_as<string>(dateTimePicker_StartDate->Text),
+			!checkBox_search_EndDate->Checked ? nullopt : (optional<string>)marshal_as<string>(dateTimePicker_EndDate->Text),
+			!checkBox_search_Country->Checked ? nullopt : (optional<string>)marshal_as<string>(textBox_Country->Text->Trim()->ToLower()),
+			!checkBox_search_City->Checked ? nullopt : (optional<string>)marshal_as<string>(textBox_City->Text->Trim()->ToLower()),
+			!checkBox_search_Winner->Checked ? nullopt : (optional<string>)marshal_as<string>(comboBox_Winner->Text),
+		};
 
-		OpenPage(0);
+		if (radioButton_search->Checked)
+			Display();
 	}
-	private: System::Void button_trueBack_Click(System::Object^ sender, System::EventArgs^ e) {
-		trueBack();
-	}
-	void trueBack()
-	{
-		if (!PgNumber)
-			return;
-
-		if (PgNumber > 0)
-			OpenPage(*PgNumber - 1);
-	}
-	private: System::Void button_trueNext_Click(System::Object^ sender, System::EventArgs^ e) {
-		trueNext();
-	}
-	void trueNext()
-	{
-		if (!PgNumber)
-			return;
-
-		if (*PgNumber + 1 < FullSize)
-			OpenPage(*PgNumber + 1);
-	}
-	private: System::Void button_trueEnd_Click(System::Object^ sender, System::EventArgs^ e) {
-		if (FullSize == 0)
-			return;
-
-		OpenPage(FullSize - 1);
-	}
-private: System::Void textBox_ManresourceAxis_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_ManresourceAllies_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_LossesAxis_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_LossesAllies_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	if ((e->KeyChar != (char)8) && (e->KeyChar < (char)48 || e->KeyChar >(char)57)) {
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_Country_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	char number = e->KeyChar;
-	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
-	{
-		e->Handled = true;
-	}
-	if (Char::IsDigit(number))
-	{
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_City_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	char number = e->KeyChar;
-	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
-	{
-		e->Handled = true;
-	}
-	if (Char::IsDigit(number))
-	{
-		e->Handled = true;
-	}
-}
-private: System::Void textBox_EventName_KeyPress(System::Object^ sender, System::Windows::Forms::KeyPressEventArgs^ e) {
-	char number = e->KeyChar;
-	if (!Char::IsLetterOrDigit(e->KeyChar) && !Char::IsControl(e->KeyChar) && e->KeyChar != ' ')
-	{
-		e->Handled = true;
-	}
-	if (Char::IsDigit(number))
-	{
-		e->Handled = true;
-	}
-}
 };
 }
